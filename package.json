@@ -1,0 +1,7 @@
+{
+  "name": "salesnexa",
+  "private": true,
+  "scripts": {
+    "dev": "python app.py"
+  }
+}

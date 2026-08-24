@@ -1,0 +1,43 @@
+{% extends 'base.html' %}
+{% block title %}{{ title }} - SalesNexa{% endblock %}
+{% block content %}
+<main class="app-shell story-{{ feature }}">
+  <aside class="sidebar">
+    <div class="sidebar-logo"><div class="logo-mark">S<span>↗</span></div><b>NEXA<span>BOT</span></b></div>
+    <span class="eyebrow">{{ current_user['role'] }} WORKSPACE</span>
+    <a href="{{ url_for('dashboard') }}">Overview</a>
+    <a class="active" href="{{ request.path }}">{{ title }}</a>
+    <a href="{{ url_for('products_page') }}">Products</a>
+    <a href="{{ url_for('sales_page') }}">Sales</a>
+    <a href="{{ url_for('inventory_page') }}">Inventory</a>
+    <a href="{{ url_for('analytics_page') }}">Analytics</a>
+    <a href="{{ url_for('forecasting_page') }}">Forecasting</a>
+    <a href="{{ url_for('insights_page') }}">AI Insights</a>
+    <a href="{{ url_for('sales_report') }}">Reports</a>
+    <a href="{{ url_for('notifications') }}">Notifications</a>
+    <div class="sidebar-bottom"><small>DEMO WORKSPACE</small><span>Live database view</span></div>
+  </aside>
+  <section class="workspace">
+    <div class="page-heading">
+      <div><span class="eyebrow">{{ {'products':'PRODUCT EXPLORER','sales':'REVENUE PULSE','inventory':'STOCK GALAXY','analytics':'REVENUE PULSE','forecast':'FUTURE VISION','anomalies':'ANOMALY RADAR','customers':'CUSTOMER CONSTELLATION','suppliers':'SUPPLY NETWORK','insights':'NEXA INTELLIGENCE'}.get(feature, eyebrow) }}</span><h1>{{ title }}</h1><p class="muted">{{ description }}</p></div>
+      <div class="page-actions">{% if current_user['role'] == 'STAFF' %}<button class="button ghost" data-manager-update>Update manager</button>{% endif %}<a class="button ghost" href="{{ url_for('dashboard') }}?openChat=1">Ask NexaBot</a>{% if feature in ['products','customers','suppliers'] and current_user['role'] in ['ADMIN','MANAGER'] %}<button class="button primary" data-open-form>+ Add record</button>{% endif %}</div>
+    </div>
+    {% if forecast %}
+      <section class="panel result-panel"><span class="eyebrow">VALIDATED MODEL OUTPUT</span>{% if forecast.available %}<h2>Next forecast values</h2><div class="forecast-values">{% for value in forecast.forecast %}<div><small>PERIOD {{ loop.index }}</small><strong>Rs {{ '%.2f'|format(value) }}</strong></div>{% endfor %}</div><div class="model-metrics"><span>Model <b>{{ forecast.model }}</b></span><span>MAE <b>{{ forecast.mae }}</b></span><span>RMSE <b>{{ forecast.rmse }}</b></span><span>MAPE <b>{{ forecast.mape }}%</b></span></div>{% else %}<h2>{{ forecast.message }}</h2>{% endif %}</section>
+    {% endif %}
+    {% if insights %}<section class="insight-list">{% for insight in insights %}<article class="panel insight-item"><span class="status-dot">VERIFIED INSIGHT</span><h2>{{ insight }}</h2></article>{% endfor %}</section>{% endif %}
+    {% if anomalies is defined %}<section class="panel">{% for anomaly in anomalies %}<article class="feed-item"><span class="status-dot">!</span><div><b>Unusual sales activity</b><p>Sale #{{ anomaly.sale_id }} on {{ anomaly.date }}: actual Rs {{ anomaly.actual }}, expected range Rs {{ anomaly.expected_low }} to Rs {{ anomaly.expected_high }}.</p></div></article>{% else %}<div class="empty"><h2>No unusual sales activity detected.</h2><p>Current recorded sales do not exceed the statistical threshold.</p></div>{% endfor %}</section>{% endif %}
+    {% if rows %}
+      <section class="panel table-panel">
+        <div class="table-toolbar"><div><span class="eyebrow">{{ rows|length }} RECORDS</span><h2>Live data</h2></div><input id="tableSearch" placeholder="Search records" aria-label="Search records"></div>
+        <div class="table-scroll"><table class="data-table"><thead><tr>{% for key,label in columns %}<th>{{ label }}</th>{% endfor %}{% if current_user['role'] in ['ADMIN','MANAGER'] and feature in ['products','sales'] %}<th>Actions</th>{% endif %}</tr></thead><tbody id="tableBody">{% for row in rows %}<tr data-record-id="{{ row['id'] if row['id'] is defined else '' }}">{% for key,label in columns %}<td data-label="{{ label }}">{% if key == 'status' %}<span class="status-badge">{{ row[key] }}</span>{% else %}{{ row[key] if row[key] is not none else '-' }}{% endif %}</td>{% endfor %}{% if current_user['role'] in ['ADMIN','MANAGER'] and feature in ['products','sales'] %}<td class="row-actions"><button type="button" data-record-action="update">Edit</button><button type="button" data-record-action="delete">Delete</button></td>{% endif %}</tr>{% endfor %}</tbody></table></div>
+        <div class="table-footer"><span id="tableCount">Showing {{ rows|length }} records</span><span>Sorted by latest business data</span></div>
+      </section>
+    {% elif not forecast and not insights and anomalies is not defined %}<div class="empty"><h2>No data available yet.</h2><p>Record business data to populate this view.</p></div>{% endif %}
+  </section>
+</main>
+<script>
+const search = document.getElementById('tableSearch');
+search?.addEventListener('input', event => { const value = event.target.value.toLowerCase(); const rows = [...document.querySelectorAll('#tableBody tr')]; const visible = rows.filter(row => { const match = row.textContent.toLowerCase().includes(value); row.hidden = !match; return match; }); document.getElementById('tableCount').textContent = `Showing ${visible.length} of ${rows.length} records`; });
+</script>
+{% endblock %}

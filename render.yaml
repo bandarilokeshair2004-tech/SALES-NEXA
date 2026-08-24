@@ -1,0 +1,26 @@
+services:
+  - type: web
+    name: salesnexa
+    runtime: python
+    buildCommand: pip install -r requirements.txt && python database/seed.py
+    startCommand: gunicorn app:app --bind 0.0.0.0:$PORT
+    healthCheckPath: /
+    envVars:
+      - key: SECRET_KEY
+        generateValue: true
+      - key: DATABASE_PATH
+        value: /opt/render/project/src/instance/salesnexa.db
+      - key: AI_API_KEY
+        sync: false
+      - key: AI_MODEL
+        value: gpt-4o-mini
+      - key: AI_BASE_URL
+        value: https://api.openai.com/v1
+      - key: AI_TIMEOUT
+        value: "20"
+      - key: FLASK_ENV
+        value: production
+    disk:
+      name: salesnexa-data
+      mountPath: /opt/render/project/src/instance
+      sizeGB: 1
