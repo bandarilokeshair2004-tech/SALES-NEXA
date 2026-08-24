@@ -39,6 +39,10 @@ npm run dev
 
 Create a GitHub repository, then from this project folder run `git init`, `git add .`, `git commit -m "Initial SalesNexa release"`, `git branch -M main`, `git remote add origin YOUR_GITHUB_REPOSITORY_URL`, and `git push -u origin main`. In Render, choose **New + > Blueprint**, connect the repository, and select `render.yaml`. Render will install the requirements, start Gunicorn, and mount persistent storage for the SQLite database. Add `AI_API_KEY` privately in Render only; never commit it.
 
+### Vercel
+
+Import the repository into Vercel and deploy it with the project root unchanged. Vercel detects `vercel.json` and `requirements.txt`, then serves the Flask app through `api/index.py`. Set `SECRET_KEY` and any optional AI variables in the Vercel project settings. Vercel's filesystem is ephemeral, so the default `/tmp/salesnexa.db` database is suitable only for a demo; use an external PostgreSQL-compatible database for persistent production data.
+
 Open `http://127.0.0.1:5000`. To initialize an empty database without demo records, use `flask --app app init-db`.
 
 ## Demo accounts
