@@ -43,7 +43,6 @@ class PostgresConnection:
         sql = sql.replace("?", "%s").replace("date('now')", "CURRENT_DATE")
         sql = sql.replace("date(sale_date)", "sale_date::date")
         sql = sql.replace("date(?)", "(%s)::date")
-        sql = sql.replace("substr(sale_date,1,7)", "TO_CHAR(sale_date, 'YYYY-MM')")
         ignore_insert = "INSERT OR IGNORE" in sql.upper()
         sql = sql.replace("INSERT OR IGNORE", "INSERT")
         if ignore_insert:
