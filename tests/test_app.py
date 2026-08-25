@@ -26,6 +26,12 @@ def test_fresh_app_initialization_creates_demo_admin(client):
         from db import query
         assert query("SELECT email FROM users WHERE email=?", ("admin@salesnexa.local",), one=True)["email"] == "admin@salesnexa.local"
 
+def test_served_app_seed_loads_demo_products(client):
+    seed(client.application)
+    with client.application.app_context():
+        from db import query
+        assert query("SELECT COUNT(*) count FROM products", one=True)["count"] == 30
+
 def test_staff_cannot_read_admin_only_placeholder(client):
     assert login(client, "staff@salesnexa.local").status_code == 302
     assert client.get("/api/analytics").status_code == 403
