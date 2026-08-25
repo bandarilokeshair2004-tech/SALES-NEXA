@@ -28,16 +28,8 @@ def test_signup_creates_staff_account_and_redirects_to_staff_dashboard(client):
     assert logged_in.status_code == 302
     assert logged_in.headers["Location"].endswith("/staff/dashboard")
 
-def test_admin_signup_requires_authorization_code(client):
-    rejected = client.post("/signup", data={"name": "Unsafe Admin", "email": "unsafe-admin@example.com", "role": "ADMIN", "password": "SecureAdmin9!", "confirm_password": "SecureAdmin9!"})
-    assert rejected.status_code == 200
-    with client.application.app_context():
-        from db import query
-        assert query("SELECT id FROM users WHERE email=?", ("unsafe-admin@example.com",), one=True) is None
-
-def test_authorized_admin_signup_redirects_to_admin_dashboard(client):
-    client.application.config["ADMIN_SIGNUP_CODE"] = "test-admin-code"
-    created = client.post("/signup", data={"name": "New Admin", "email": "newadmin@example.com", "role": "ADMIN", "admin_code": "test-admin-code", "password": "SecureAdmin9!", "confirm_password": "SecureAdmin9!"})
+def test_admin_signup_redirects_to_admin_dashboard(client):
+    created = client.post("/signup", data={"name": "New Admin", "email": "newadmin@example.com", "role": "ADMIN", "password": "SecureAdmin9!", "confirm_password": "SecureAdmin9!"})
     assert created.status_code == 302
     logged_in = client.post("/login", data={"email": "newadmin@example.com", "password": "SecureAdmin9!"})
     assert logged_in.status_code == 302

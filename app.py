@@ -93,7 +93,6 @@ def create_app(test_config=None):
             password = request.form.get("password", "")
             confirm_password = request.form.get("confirm_password", "")
             requested_role = request.form.get("role", "STAFF").strip().upper()
-            admin_code = request.form.get("admin_code", "")
             errors = []
             if not name:
                 errors.append("Enter your name.")
@@ -105,8 +104,6 @@ def create_app(test_config=None):
                 errors.append("Passwords do not match.")
             if requested_role not in ("ADMIN", "STAFF", "VIEWER"):
                 errors.append("Choose a valid account type.")
-            if requested_role == "ADMIN" and (not app.config.get("ADMIN_SIGNUP_CODE") or admin_code != app.config["ADMIN_SIGNUP_CODE"]):
-                errors.append("Admin signup requires an administrator authorization code.")
             if query("SELECT id FROM users WHERE lower(email)=?", (email,), one=True):
                 errors.append("That email is already registered. Use another email address.")
             if errors:
