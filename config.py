@@ -7,7 +7,7 @@ load_dotenv(BASE_DIR / ".env")
 
 class Config:
     SECRET_KEY = os.getenv("SECRET_KEY", "salesnexa-dev-key-change-me")
-    DATABASE_URL = os.getenv("DATABASE_URL") or os.getenv("POSTGRES_URL") or os.getenv("POSTGRES_PRISMA_URL", "")
+    DATABASE_URL = os.getenv("DATABASE_URL", "")
     DATABASE = os.getenv("DATABASE_PATH", "/tmp/salesnexa.db" if os.getenv("VERCEL") else str(BASE_DIR / "instance" / "salesnexa.db"))
     SESSION_COOKIE_HTTPONLY = True
     SESSION_COOKIE_SAMESITE = "Lax"
