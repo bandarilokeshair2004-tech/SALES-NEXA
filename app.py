@@ -2,10 +2,11 @@ import sqlite3
 import csv
 import io
 import os
+import re
 from datetime import date, datetime, timedelta
 from functools import wraps
 from flask import Flask, abort, flash, jsonify, redirect, render_template, request, session, url_for
-from werkzeug.security import check_password_hash
+from werkzeug.security import check_password_hash, generate_password_hash
 from config import Config
 from db import close_db, get_db, init_db, query
 from services.forecast_service import revenue_forecast
@@ -82,6 +83,36 @@ def create_app(test_config=None):
                 return redirect(url_for("dashboard"))
             flash("Invalid credentials or inactive account.", "error")
         return render_template("auth/login.html")
+
+    @app.route("/signup", methods=["GET", "POST"])
+    def signup():
+        if request.method == "POST":
+            name = request.form.get("name", "").strip()
+            email = request.form.get("email", "").strip().lower()
+            password = request.form.get("password", "")
+            confirm_password = request.form.get("confirm_password", "")
+            errors = []
+            if not name:
+                errors.append("Enter your name.")
+            if not email:
+                errors.append("Enter a valid email address.")
+            if len(password) < 8 or not re.search(r"[A-Za-z]", password) or not re.search(r"\d", password) or not re.search(r"[^A-Za-z0-9]", password):
+                errors.append("Password must be at least 8 characters and include a letter, number, and special character.")
+            if password != confirm_password:
+                errors.append("Passwords do not match.")
+            if query("SELECT id FROM users WHERE lower(email)=?", (email,), one=True):
+                errors.append("That email is already registered. Use another email address.")
+            if errors:
+                for error in errors:
+                    flash(error, "error")
+                return render_template("auth/signup.html")
+            role_id = query("SELECT id FROM roles WHERE name='VIEWER'", one=True)["id"]
+            db = get_db()
+            db.execute("INSERT INTO users(name,email,password_hash,role_id) VALUES(?,?,?,?)", (name, email, generate_password_hash(password), role_id))
+            db.commit()
+            flash("Account created. Sign in to open your SalesNexa workspace.", "success")
+            return redirect(url_for("login"))
+        return render_template("auth/signup.html")
 
     @app.route("/logout")
     def logout():

@@ -21,6 +21,25 @@ def test_auth_and_dashboard(client):
     assert response.status_code == 302
     assert client.get("/dashboard").status_code == 200
 
+def test_user_can_create_unique_viewer_account_and_sign_in(client):
+    response = client.post("/signup", data={"name": "Lokesh", "email": "Lokesh@admin.com", "password": "NexaFuture9!", "confirm_password": "NexaFuture9!"})
+    assert response.status_code == 302
+    assert client.post("/login", data={"email": "lokesh@admin.com", "password": "NexaFuture9!"}).status_code == 302
+    with client.application.app_context():
+        from db import get_db
+        user = get_db().execute("SELECT u.email,r.name role FROM users u JOIN roles r ON r.id=u.role_id WHERE lower(u.email)=?", ("lokesh@admin.com",)).fetchone()
+        assert user["email"] == "lokesh@admin.com"
+        assert user["role"] == "VIEWER"
+
+def test_signup_rejects_weak_password_and_duplicate_email(client):
+    weak = client.post("/signup", data={"name": "Lokesh", "email": "new@admin.com", "password": "password", "confirm_password": "password"})
+    assert weak.status_code == 200
+    duplicate = client.post("/signup", data={"name": "Another", "email": "ADMIN@SALESNEXA.LOCAL", "password": "NexaFuture9!", "confirm_password": "NexaFuture9!"})
+    assert duplicate.status_code == 200
+    with client.application.app_context():
+        from db import get_db
+        assert get_db().execute("SELECT COUNT(*) count FROM users WHERE lower(email)=?", ("admin@salesnexa.local",)).fetchone()["count"] == 1
+
 def test_staff_cannot_read_admin_only_placeholder(client):
     assert login(client, "staff@salesnexa.local").status_code == 302
     assert client.get("/api/analytics").status_code == 403
