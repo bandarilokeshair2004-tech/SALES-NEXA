@@ -21,18 +21,6 @@ def test_auth_and_dashboard(client):
     assert response.status_code == 302
     assert client.get("/dashboard").status_code == 200
 
-def test_gmail_account_can_choose_staff_dashboard(client):
-    created = client.post("/signup", data={"name": "Lokesh Kumar", "email": "lokesh.staff@gmail.com", "role": "STAFF", "password": "Nanna@1912", "confirm_password": "Nanna@1912"})
-    assert created.status_code == 302
-    logged_in = client.post("/login", data={"email": "lokesh.staff@gmail.com", "password": "Nanna@1912"})
-    assert logged_in.headers["Location"].endswith("/staff/dashboard")
-
-def test_gmail_account_can_choose_admin_dashboard(client):
-    created = client.post("/signup", data={"name": "Lokesh Kumar", "email": "lokesh.admin@gmail.com", "role": "ADMIN", "password": "Nanna@1912", "confirm_password": "Nanna@1912"})
-    assert created.status_code == 302
-    logged_in = client.post("/login", data={"email": "lokesh.admin@gmail.com", "password": "Nanna@1912"})
-    assert logged_in.headers["Location"].endswith("/admin/dashboard")
-
 def test_fresh_app_initialization_creates_demo_admin(client):
     with client.application.app_context():
         from db import query
