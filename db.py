@@ -1,7 +1,6 @@
 import sqlite3
 from pathlib import Path
 from flask import current_app, g
-from werkzeug.security import generate_password_hash
 
 
 def get_db():
@@ -28,12 +27,6 @@ def init_db():
         db.execute("ALTER TABLE chat_messages ADD COLUMN language TEXT NOT NULL DEFAULT 'en'")
     if "intent" not in columns:
         db.execute("ALTER TABLE chat_messages ADD COLUMN intent TEXT")
-    for role in ("SUPER ADMIN", "ADMIN", "MANAGER", "STAFF", "VIEWER"):
-        db.execute("INSERT OR IGNORE INTO roles(name) VALUES (?)", (role,))
-    accounts = (("Demo Admin", "admin@salesnexa.local", "ADMIN"), ("Demo Manager", "manager@salesnexa.local", "MANAGER"), ("Demo Staff", "staff@salesnexa.local", "STAFF"), ("Demo Viewer", "viewer@salesnexa.local", "VIEWER"))
-    for name, email, role in accounts:
-        role_id = db.execute("SELECT id FROM roles WHERE name=?", (role,)).fetchone()[0]
-        db.execute("INSERT OR IGNORE INTO users(name,email,password_hash,role_id) VALUES(?,?,?,?)", (name, email, generate_password_hash("DemoPass123!"), role_id))
     db.commit()
 
 

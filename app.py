@@ -2,11 +2,10 @@ import sqlite3
 import csv
 import io
 import os
-import re
 from datetime import date, datetime, timedelta
 from functools import wraps
 from flask import Flask, abort, flash, jsonify, redirect, render_template, request, session, url_for
-from werkzeug.security import check_password_hash, generate_password_hash
+from werkzeug.security import check_password_hash
 from config import Config
 from db import close_db, get_db, init_db, query
 from services.forecast_service import revenue_forecast
@@ -80,43 +79,9 @@ def create_app(test_config=None):
                 session["login_message"] = "ADMIN SUCCESSFULLY LOGIN" if user["role"] in ("ADMIN", "MANAGER", "SUPER ADMIN") else "USER LOGIN SUCCESSFULL"
                 get_db().execute("UPDATE users SET last_login=CURRENT_TIMESTAMP WHERE id=?", (user["id"],))
                 get_db().execute("INSERT INTO audit_logs(user_id,action,entity,details) VALUES(?,?,?,?)", (user["id"], "Login", "users", email)); get_db().commit()
-                destination = "admin_dashboard" if user["role"] in ("ADMIN", "SUPER ADMIN", "MANAGER") else "staff_dashboard" if user["role"] == "STAFF" else "dashboard"
-                return redirect(url_for(destination))
+                return redirect(url_for("dashboard"))
             flash("Invalid credentials or inactive account.", "error")
         return render_template("auth/login.html")
-
-    @app.route("/signup", methods=["GET", "POST"])
-    def signup():
-        if request.method == "POST":
-            name = request.form.get("name", "").strip()
-            email = request.form.get("email", "").strip().lower()
-            password = request.form.get("password", "")
-            confirm_password = request.form.get("confirm_password", "")
-            requested_role = request.form.get("role", "STAFF").strip().upper()
-            errors = []
-            if not name:
-                errors.append("Enter your name.")
-            if not re.fullmatch(r"[^@\s]+@[^@\s]+\.[^@\s]+", email):
-                errors.append("Enter a valid email address.")
-            if len(password) < 8 or not re.search(r"[A-Za-z]", password) or not re.search(r"\d", password) or not re.search(r"[^A-Za-z0-9]", password):
-                errors.append("Password must be at least 8 characters and include a letter, number, and special character.")
-            if password != confirm_password:
-                errors.append("Passwords do not match.")
-            if requested_role not in ("ADMIN", "STAFF", "VIEWER"):
-                errors.append("Choose a valid account type.")
-            if query("SELECT id FROM users WHERE lower(email)=?", (email,), one=True):
-                errors.append("That email is already registered. Use another email address.")
-            if errors:
-                for error in errors:
-                    flash(error, "error")
-                return render_template("auth/signup.html")
-            role_id = query("SELECT id FROM roles WHERE name=?", (requested_role,), one=True)["id"]
-            db = get_db()
-            db.execute("INSERT INTO users(name,email,password_hash,role_id) VALUES(?,?,?,?)", (name, email, generate_password_hash(password), role_id))
-            db.commit()
-            flash("Account created. Sign in to open your SalesNexa workspace.", "success")
-            return redirect(url_for("login"))
-        return render_template("auth/signup.html")
 
     @app.route("/logout")
     def logout():
@@ -140,8 +105,6 @@ def create_app(test_config=None):
         return jsonify(language=code, name=language_name(code), scope=scope)
 
     @app.route("/dashboard")
-    @app.route("/admin/dashboard", endpoint="admin_dashboard")
-    @app.route("/staff/dashboard", endpoint="staff_dashboard")
     @login_required
     def dashboard():
         db = get_db()

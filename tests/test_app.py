@@ -21,38 +21,6 @@ def test_auth_and_dashboard(client):
     assert response.status_code == 302
     assert client.get("/dashboard").status_code == 200
 
-def test_signup_creates_staff_account_and_redirects_to_staff_dashboard(client):
-    created = client.post("/signup", data={"name": "New Staff", "email": "newstaff@example.com", "role": "STAFF", "password": "SecureStaff9!", "confirm_password": "SecureStaff9!"})
-    assert created.status_code == 302
-    logged_in = client.post("/login", data={"email": "newstaff@example.com", "password": "SecureStaff9!"})
-    assert logged_in.status_code == 302
-    assert logged_in.headers["Location"].endswith("/staff/dashboard")
-
-def test_admin_signup_redirects_to_admin_dashboard(client):
-    created = client.post("/signup", data={"name": "New Admin", "email": "newadmin@example.com", "role": "ADMIN", "password": "SecureAdmin9!", "confirm_password": "SecureAdmin9!"})
-    assert created.status_code == 302
-    logged_in = client.post("/login", data={"email": "newadmin@example.com", "password": "SecureAdmin9!"})
-    assert logged_in.status_code == 302
-    assert logged_in.headers["Location"].endswith("/admin/dashboard")
-
-def test_database_initialization_creates_demo_accounts(monkeypatch):
-    path = os.path.join(tempfile.gettempdir(), "salesnexa-init-test.db")
-    if os.path.exists(path): os.remove(path)
-    monkeypatch.setenv("DATABASE_PATH", path)
-    app = create_app({"TESTING": True, "DATABASE": path})
-    response = app.test_client().post("/login", data={"email": "admin@salesnexa.local", "password": "DemoPass123!"})
-    assert response.status_code == 302
-
-def test_seed_can_initialize_the_served_app_instance(monkeypatch):
-    path = os.path.join(tempfile.gettempdir(), "salesnexa-served-app-test.db")
-    if os.path.exists(path): os.remove(path)
-    monkeypatch.setenv("DATABASE_PATH", path)
-    app = create_app({"TESTING": True, "DATABASE": path})
-    seed(app)
-    with app.app_context():
-        from db import query
-        assert query("SELECT COUNT(*) count FROM products", one=True)["count"] == 30
-
 def test_staff_cannot_read_admin_only_placeholder(client):
     assert login(client, "staff@salesnexa.local").status_code == 302
     assert client.get("/api/analytics").status_code == 403

@@ -4,8 +4,8 @@ from app import create_app
 from db import get_db, init_db
 
 
-def seed(app=None):
-    app = app or create_app()
+def seed():
+    app = create_app()
     with app.app_context():
         init_db()
         db = get_db()
