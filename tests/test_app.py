@@ -29,6 +29,16 @@ def test_database_initialization_creates_demo_accounts(monkeypatch):
     response = app.test_client().post("/login", data={"email": "admin@salesnexa.local", "password": "DemoPass123!"})
     assert response.status_code == 302
 
+def test_seed_can_initialize_the_served_app_instance(monkeypatch):
+    path = os.path.join(tempfile.gettempdir(), "salesnexa-served-app-test.db")
+    if os.path.exists(path): os.remove(path)
+    monkeypatch.setenv("DATABASE_PATH", path)
+    app = create_app({"TESTING": True, "DATABASE": path})
+    seed(app)
+    with app.app_context():
+        from db import query
+        assert query("SELECT COUNT(*) count FROM products", one=True)["count"] == 30
+
 def test_staff_cannot_read_admin_only_placeholder(client):
     assert login(client, "staff@salesnexa.local").status_code == 302
     assert client.get("/api/analytics").status_code == 403
