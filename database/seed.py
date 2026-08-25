@@ -1,7 +1,7 @@
 from datetime import date, timedelta
 from werkzeug.security import generate_password_hash
 from app import create_app
-from db import get_db, init_db
+from db import get_db, init_db, insert_id
 
 
 def seed():
@@ -41,8 +41,7 @@ def seed():
             product_id = 1
             product = db.execute("SELECT selling_price,cost_price FROM products WHERE id=?", (product_id,)).fetchone()
             total = product[0] * 2
-            db.execute("INSERT INTO sales(customer_id,user_id,subtotal,total,sale_date) VALUES(?,?,?,?,date('now'))", (1, admin_id, total, total))
-            sale_id = db.execute("SELECT last_insert_rowid()").fetchone()[0]
+            sale_id = insert_id(db, "INSERT INTO sales(customer_id,user_id,subtotal,total,sale_date) VALUES(?,?,?,?,date('now'))", (1, admin_id, total, total))
             db.execute("INSERT INTO sale_items(sale_id,product_id,quantity,unit_price,cost_price) VALUES(?,?,?,?,?)", (sale_id, product_id, 2, product[0], product[1]))
             db.commit()
             print("SalesNexa demo database refreshed with today's demo sale")
@@ -54,15 +53,13 @@ def seed():
                 quantity = 2 + (day % 4)
                 product = db.execute("SELECT selling_price,cost_price FROM products WHERE id=?", (product_id,)).fetchone()
                 total = product[0] * quantity
-                db.execute("INSERT INTO sales(customer_id,user_id,subtotal,total,sale_date) VALUES(?,?,?,?,?)", ((day % 20) + 1, admin_id, total, total, sale_day.isoformat()))
-                sale_id = db.execute("SELECT last_insert_rowid()").fetchone()[0]
+                sale_id = insert_id(db, "INSERT INTO sales(customer_id,user_id,subtotal,total,sale_date) VALUES(?,?,?,?,?)", ((day % 20) + 1, admin_id, total, total, sale_day.isoformat()))
                 db.execute("INSERT INTO sale_items(sale_id,product_id,quantity,unit_price,cost_price) VALUES(?,?,?,?,?)", (sale_id, product_id, quantity, product[0], product[1]))
         product = db.execute("SELECT selling_price,cost_price FROM products WHERE id=1").fetchone()
         total = product[0] * 2
-        db.execute("INSERT INTO sales(customer_id,user_id,subtotal,total,sale_date) VALUES(?,?,?,?,date('now'))", (1, admin_id, total, total))
-        sale_id = db.execute("SELECT last_insert_rowid()").fetchone()[0]
+        sale_id = insert_id(db, "INSERT INTO sales(customer_id,user_id,subtotal,total,sale_date) VALUES(?,?,?,?,date('now'))", (1, admin_id, total, total))
         db.execute("INSERT INTO sale_items(sale_id,product_id,quantity,unit_price,cost_price) VALUES(?,?,?,?,?)", (sale_id, 1, 2, product[0], product[1]))
-        db.execute("INSERT OR REPLACE INTO sales_targets(period,target) VALUES('monthly', 100000)")
+        db.execute("INSERT INTO sales_targets(period,target) VALUES('monthly', 100000) ON CONFLICT(period) DO UPDATE SET target=excluded.target")
         db.commit()
         print("SalesNexa demo database initialized")
 

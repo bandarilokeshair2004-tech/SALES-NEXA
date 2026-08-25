@@ -8,7 +8,7 @@ from functools import wraps
 from flask import Flask, abort, flash, jsonify, redirect, render_template, request, session, url_for
 from werkzeug.security import check_password_hash, generate_password_hash
 from config import Config
-from db import close_db, get_db, init_db, query
+from db import close_db, get_db, init_db, insert_id, query
 from services.forecast_service import revenue_forecast
 from services.anomaly_service import sales_anomalies
 from chatbot import tools
@@ -236,8 +236,7 @@ def create_app(test_config=None):
             db = get_db(); product = db.execute("SELECT p.*, i.quantity FROM products p JOIN inventory i ON i.product_id=p.id WHERE p.id=? AND p.active=1", (product_id,)).fetchone()
             if not product or product["quantity"] < quantity: return jsonify(error="Product unavailable or insufficient stock."), 400
             subtotal = round(product["selling_price"] * quantity, 2); total = round(subtotal - discount + tax, 2)
-            db.execute("INSERT INTO sales(customer_id,user_id,subtotal,discount,tax,total) VALUES(?,?,?,?,?,?)", (data.get("customer_id") or None, session["user_id"], subtotal, discount, tax, total))
-            sale_id = db.execute("SELECT last_insert_rowid()").fetchone()[0]
+            sale_id = insert_id(db, "INSERT INTO sales(customer_id,user_id,subtotal,discount,tax,total) VALUES(?,?,?,?,?,?)", (data.get("customer_id") or None, session["user_id"], subtotal, discount, tax, total))
             db.execute("INSERT INTO sale_items(sale_id,product_id,quantity,unit_price,cost_price) VALUES(?,?,?,?,?)", (sale_id, product_id, quantity, product["selling_price"], product["cost_price"]))
             remaining = product["quantity"] - quantity; db.execute("UPDATE inventory SET quantity=?,updated_at=CURRENT_TIMESTAMP WHERE product_id=?", (remaining, product_id))
             db.execute("INSERT INTO inventory_movements(product_id,user_id,change_quantity,reason) VALUES(?,?,?,?)", (product_id, session["user_id"], -quantity, "Sale"))
@@ -261,8 +260,7 @@ def create_app(test_config=None):
             data = request.get_json(silent=True) or request.form
             try:
                 values = (data["name"].strip(), data["sku"].strip().upper(), int(data["category_id"]), float(data["selling_price"]), float(data["cost_price"]), int(data.get("reorder_level", 10)))
-                db.execute("INSERT INTO products(name,sku,category_id,selling_price,cost_price,reorder_level) VALUES(?,?,?,?,?,?)", values)
-                product_id = db.execute("SELECT last_insert_rowid()").fetchone()[0]
+                product_id = insert_id(db, "INSERT INTO products(name,sku,category_id,selling_price,cost_price,reorder_level) VALUES(?,?,?,?,?,?)", values)
                 db.execute("INSERT INTO inventory(product_id,quantity) VALUES(?,?)", (product_id, int(data.get("stock_quantity", 0)))); db.commit()
                 return jsonify(id=product_id), 201
             except (KeyError, ValueError, sqlite3.IntegrityError):
@@ -382,8 +380,7 @@ def create_app(test_config=None):
         db = get_db()
         chat_session_id = session.get("chat_session_id")
         if not chat_session_id:
-            cursor = db.execute("INSERT INTO chat_sessions(user_id) VALUES(?)", (session["user_id"],))
-            chat_session_id = cursor.lastrowid
+            chat_session_id = insert_id(db, "INSERT INTO chat_sessions(user_id) VALUES(?)", (session["user_id"],))
             session["chat_session_id"] = chat_session_id
         db.execute("INSERT INTO chat_messages(session_id,role,content,language,intent) VALUES(?,?,?,?,?)", (chat_session_id, "user", original_question, language, details["intent"]))
         db.execute("INSERT INTO chat_messages(session_id,role,content,language,intent) VALUES(?,?,?,?,?)", (chat_session_id, "assistant", answer, language, details["intent"]))
