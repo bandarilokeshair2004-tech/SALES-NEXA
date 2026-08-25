@@ -21,6 +21,11 @@ def test_auth_and_dashboard(client):
     assert response.status_code == 302
     assert client.get("/dashboard").status_code == 200
 
+def test_fresh_app_initialization_creates_demo_admin(client):
+    with client.application.app_context():
+        from db import query
+        assert query("SELECT email FROM users WHERE email=?", ("admin@salesnexa.local",), one=True)["email"] == "admin@salesnexa.local"
+
 def test_staff_cannot_read_admin_only_placeholder(client):
     assert login(client, "staff@salesnexa.local").status_code == 302
     assert client.get("/api/analytics").status_code == 403
