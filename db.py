@@ -90,6 +90,9 @@ def init_db():
         for statement in schema_path.read_text(encoding="utf-8").split(";"):
             if statement.strip():
                 db.execute(statement)
+        for table, columns in {"products": ("selling_price", "cost_price"), "sales": ("subtotal", "discount", "tax", "total"), "sale_items": ("unit_price", "cost_price"), "forecasts": ("predicted_revenue",), "anomalies": ("actual", "expected_low", "expected_high"), "sales_targets": ("target",)}.items():
+            for column in columns:
+                db.execute(f"ALTER TABLE {table} ALTER COLUMN {column} TYPE NUMERIC USING {column}::numeric")
         columns = {row["column_name"] for row in db.execute("SELECT column_name FROM information_schema.columns WHERE table_name='chat_messages'").fetchall()}
     else:
         schema_path = Path(current_app.root_path) / "database" / "schema.sql"
