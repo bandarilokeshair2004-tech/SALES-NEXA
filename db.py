@@ -22,6 +22,8 @@ def init_db():
     db = get_db()
     schema_path = Path(current_app.root_path) / "database" / "schema.sql"
     db.executescript(schema_path.read_text(encoding="utf-8"))
+    for role in ("SUPER ADMIN", "ADMIN", "MANAGER", "STAFF", "VIEWER"):
+        db.execute("INSERT OR IGNORE INTO roles(name) VALUES (?)", (role,))
     columns = {row["name"] for row in db.execute("PRAGMA table_info(chat_messages)").fetchall()}
     if "language" not in columns:
         db.execute("ALTER TABLE chat_messages ADD COLUMN language TEXT NOT NULL DEFAULT 'en'")

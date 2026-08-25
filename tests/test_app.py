@@ -31,6 +31,14 @@ def test_user_can_create_unique_viewer_account_and_sign_in(client):
         assert user["email"] == "lokesh@admin.com"
         assert user["role"] == "VIEWER"
 
+def test_signup_works_on_fresh_database_without_seed(monkeypatch):
+    path = os.path.join(tempfile.gettempdir(), "salesnexa-fresh-test.db")
+    if os.path.exists(path): os.remove(path)
+    monkeypatch.setenv("DATABASE_PATH", path)
+    app = create_app({"TESTING": True, "DATABASE": path})
+    response = app.test_client().post("/signup", data={"name": "Fresh User", "email": "fresh@example.com", "password": "FreshUser9!", "confirm_password": "FreshUser9!"})
+    assert response.status_code == 302
+
 def test_signup_rejects_weak_password_and_duplicate_email(client):
     weak = client.post("/signup", data={"name": "Lokesh", "email": "new@admin.com", "password": "password", "confirm_password": "password"})
     assert weak.status_code == 200
