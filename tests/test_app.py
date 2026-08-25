@@ -21,6 +21,14 @@ def test_auth_and_dashboard(client):
     assert response.status_code == 302
     assert client.get("/dashboard").status_code == 200
 
+def test_database_initialization_creates_demo_accounts(monkeypatch):
+    path = os.path.join(tempfile.gettempdir(), "salesnexa-init-test.db")
+    if os.path.exists(path): os.remove(path)
+    monkeypatch.setenv("DATABASE_PATH", path)
+    app = create_app({"TESTING": True, "DATABASE": path})
+    response = app.test_client().post("/login", data={"email": "admin@salesnexa.local", "password": "DemoPass123!"})
+    assert response.status_code == 302
+
 def test_staff_cannot_read_admin_only_placeholder(client):
     assert login(client, "staff@salesnexa.local").status_code == 302
     assert client.get("/api/analytics").status_code == 403
