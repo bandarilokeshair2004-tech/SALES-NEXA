@@ -80,7 +80,8 @@ def create_app(test_config=None):
                 session["login_message"] = "ADMIN SUCCESSFULLY LOGIN" if user["role"] in ("ADMIN", "MANAGER", "SUPER ADMIN") else "USER LOGIN SUCCESSFULL"
                 get_db().execute("UPDATE users SET last_login=CURRENT_TIMESTAMP WHERE id=?", (user["id"],))
                 get_db().execute("INSERT INTO audit_logs(user_id,action,entity,details) VALUES(?,?,?,?)", (user["id"], "Login", "users", email)); get_db().commit()
-                return redirect(url_for("dashboard"))
+                destination = "admin_dashboard" if user["role"] in ("ADMIN", "SUPER ADMIN", "MANAGER") else "staff_dashboard" if user["role"] == "STAFF" else "dashboard"
+                return redirect(url_for(destination))
             flash("Invalid credentials or inactive account.", "error")
         return render_template("auth/login.html")
 
@@ -91,6 +92,7 @@ def create_app(test_config=None):
             email = request.form.get("email", "").strip().lower()
             password = request.form.get("password", "")
             confirm_password = request.form.get("confirm_password", "")
+            requested_role = request.form.get("role", "VIEWER").strip().upper()
             errors = []
             if not name:
                 errors.append("Enter your name.")
@@ -100,13 +102,15 @@ def create_app(test_config=None):
                 errors.append("Password must be at least 8 characters and include a letter, number, and special character.")
             if password != confirm_password:
                 errors.append("Passwords do not match.")
+            if requested_role not in ("ADMIN", "STAFF", "VIEWER"):
+                errors.append("Choose a valid account type.")
             if query("SELECT id FROM users WHERE lower(email)=?", (email,), one=True):
                 errors.append("That email is already registered. Use another email address.")
             if errors:
                 for error in errors:
                     flash(error, "error")
                 return render_template("auth/signup.html")
-            role_id = query("SELECT id FROM roles WHERE name='VIEWER'", one=True)["id"]
+            role_id = query("SELECT id FROM roles WHERE name=?", (requested_role,), one=True)["id"]
             db = get_db()
             db.execute("INSERT INTO users(name,email,password_hash,role_id) VALUES(?,?,?,?)", (name, email, generate_password_hash(password), role_id))
             db.commit()
@@ -136,6 +140,8 @@ def create_app(test_config=None):
         return jsonify(language=code, name=language_name(code), scope=scope)
 
     @app.route("/dashboard")
+    @app.route("/admin/dashboard", endpoint="admin_dashboard")
+    @app.route("/staff/dashboard", endpoint="staff_dashboard")
     @login_required
     def dashboard():
         db = get_db()

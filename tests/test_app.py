@@ -31,6 +31,15 @@ def test_user_can_create_unique_viewer_account_and_sign_in(client):
         assert user["email"] == "lokesh@admin.com"
         assert user["role"] == "VIEWER"
 
+def test_account_type_redirects_to_matching_dashboard(client):
+    admin = client.post("/signup", data={"name": "Admin User", "email": "new-admin@example.com", "role": "ADMIN", "password": "NexaAdmin9!", "confirm_password": "NexaAdmin9!"})
+    assert admin.status_code == 302
+    assert client.post("/login", data={"email": "new-admin@example.com", "password": "NexaAdmin9!"}).headers["Location"].endswith("/admin/dashboard")
+    client.get("/logout")
+    staff = client.post("/signup", data={"name": "Staff User", "email": "new-staff@example.com", "role": "STAFF", "password": "NexaStaff9!", "confirm_password": "NexaStaff9!"})
+    assert staff.status_code == 302
+    assert client.post("/login", data={"email": "new-staff@example.com", "password": "NexaStaff9!"}).headers["Location"].endswith("/staff/dashboard")
+
 def test_signup_works_on_fresh_database_without_seed(monkeypatch):
     path = os.path.join(tempfile.gettempdir(), "salesnexa-fresh-test.db")
     if os.path.exists(path): os.remove(path)
